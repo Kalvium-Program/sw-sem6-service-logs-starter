@@ -1,0 +1,29 @@
+services:
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "127.0.0.1:8092:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [app]
+  app:
+    build: ./app
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGDATABASE: campus_stock
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campus_store
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -h 127.0.0.1 -U postgres -d campus_store"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
